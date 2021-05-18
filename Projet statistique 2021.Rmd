@@ -1,0 +1,159 @@
+---
+title: "Projet Statistique 2021"
+author: "Sara, Elena, Anna, Laura"
+date: "16/5/2021"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+geometry: margin=1in
+fontsize: 11pt
+endnote: no
+sansitup: no
+bibliography: biblio.bib
+---
+
+## Introduction 
+### 1.1 Description of the task
+
+It has been asked us to find the values of the different elements presents in the quiz and then, for both the first and the second question, to compare and explain the results we obtained after the modification of some specifics parameters, focusing our analysis on how these variations affected the outcomes. 
+
+In the first question it has been asked us to compare two different scatterplots, generated with the same sample size (n=500), but with the variation of the angle parameter (value of _0_ for the first scatterplots, and of _0.37_ for the second). 
+We described the visuals changes that occurred after the variation of the angle and explained how this parameter modified the scatterplots obtained. 
+
+
+The second question required the study of the coverage of different confidence intervals, using the function CIs computed with 4 different settings based on the information we found in the quiz.
+In all four situations we considered as estimator only the Pearson correlation coefficient. The different settings applied the modification of the sample size from _n=42_ to _n=90_, of the additional parameters as _rho_, _angle_, _out_, _dev_, and of the setting of the function CIs : _normal, boot_; _ouliers, boot_; _discrete, npboot_ and _nonlinear, npboot_. 
+The first task for this second questions has been to analyse and discuss the values of the coverage, obtained from the two different sizes of the sample we used (n=42, n=90) and to understand again the impact this variation had on the results. 
+Based on the same data, we had also to consider the contribution of the parametric bootstrap on the coverage's performance, wondering in which setting the nonparametric bootstrap would have a better impact on the finals results. 
+
+
+#### 1.2 Aditional knowledge 
+
+This project gave us the opportunity to learn the better way to read and approach a scientific study, based mostly on the interpretation of numerical and graphical sources, rather than on documentary researches. Furthermore, we learned the basics steps in order to write and compile a scientific report using the R's language, knowledge that we'll be able to apply, if necessary, in our future academical path. 
+
+## Analysis 
+### 2.1 Description and Interpretation of the results 
+#### 2.1.1 Exercise 2, question 1: Bias Study, Nonlinear Relationship
+Our first request was to produce random samples of data with a nonlinear relationship by computing the function`gen_nonlinear`, which considers as parameters: the sample size _n_, the mean and the standard deviation of the variables _x_ and _y_ (respectively _muX_, _muY_ and _sX_, _sY_), and finally an _angle parameter_ (range from _-3.1416_ to _3.1416_). After the collection of these data, we worked at the generation on two different scatterplots, based on the population correlation given by the following function : 
+
+
+```{r, fig.align='center'}
+cor_nonlinear <- function(muX, muY, sX, sY, angle){
+  sQ <- sqrt(cos(angle)**2 * (2*sX**4 + 4*sX**2*muX**2 +  sY**2) + sin(angle)**2 * sX**2 + 2 * cos(angle)*sin(angle)*(2*sX**2*muX))
+  sR <- sqrt(sin(angle)**2 * (2*sX**4 + 4*sX**2*muX**2 + sY**2) + cos(angle)**2 * sX**2 - 2 * cos(angle)*sin(angle)*(2*sX**2*muX))
+  cov <- sin(angle)*cos(angle) * (sX**2 - (2*sX**4 + 4*sX**2*muX**2 + sY**2)) +
+    (cos(angle)**2 - sin(angle)**2) * (2*sX**2*muX)
+  cor <- round(cov/(sQ*sR), 4)
+  return(cor)
+}
+```
+
+As asked, we computed the population correlation based on this function by setting two different values of the _angle parameter_: _angle = 0_ as first, and then _angle = 0.37_. The following scatterplots are the visuals results of the computation of these two functions. 
+
+```{r, echo=FALSE, fig.align='center', fig.height= 4}
+SAMPLESEED <- 18411
+n <- 500
+muX <- 0
+muY <- -1
+sX  <- 0.6
+sY  <- 1.9
+angle= 0
+gen_nonlinear <- function(n, muX, muY, sX, sY, angle){
+  rotmat <- matrix(c(cos(angle), -sin(angle), sin(angle), cos(angle)),2,2)
+  x <- rnorm(n, muX, sX)
+  y <- x**2 + rnorm(n, muY, sY)
+  df <- cbind(x,y)
+  df <- df %*% rotmat
+  df <- as.data.frame(df)
+  names(df) <- c("x", "y")
+  return(df)
+}
+cor_nonlinear <- function(muX, muY, sX, sY, angle){
+  # muX and muY have no effect
+  sQ <- sqrt(cos(angle)**2 * (2*sX**4 + 4*sX**2*muX**2 +  sY**2) + sin(angle)**2 * sX**2 + 2 * cos(angle)*sin(angle)*(2*sX**2*muX))
+  sR <- sqrt(sin(angle)**2 * (2*sX**4 + 4*sX**2*muX**2 + sY**2) + cos(angle)**2 * sX**2 - 2 * cos(angle)*sin(angle)*(2*sX**2*muX))
+  cov <- sin(angle)*cos(angle) * (sX**2 - (2*sX**4 + 4*sX**2*muX**2 + sY**2)) +
+    (cos(angle)**2 - sin(angle)**2) * (2*sX**2*muX)
+  cor <- round(cov/(sQ*sR), 4)
+  return(cor)
+}
+
+n <- 500
+set.seed(18411)
+df <- gen_nonlinear(n=n, muX=muX, muY=muY, sX=sX, sY=sY, angle=0)
+# population correlation in this setting 
+rho <- cor_nonlinear(muX=muX, muY=muY, sX=sX, sY=# Generate data, nonlinear setting
+                       sY, angle=angle)
+plot(df, main=paste("Population correlation = ", round(rho, 3)))
+```
+
+
+```{r, echo=FALSE, fig.align='center', fig.height= 4}
+SAMPLESEED <- 18411
+n <- 500
+muX <- 0
+muY <- -1
+sX  <- 0.6
+sY  <- 1.9
+angle=0.37
+gen_nonlinear <- function(n, muX, muY, sX, sY, angle){
+  rotmat <- matrix(c(cos(angle), -sin(angle), sin(angle), cos(angle)),2,2)
+  x <- rnorm(n, muX, sX)
+  y <- x**2 + rnorm(n, muY, sY)
+  df <- cbind(x,y)
+  df <- df %*% rotmat
+  df <- as.data.frame(df)
+  names(df) <- c("x", "y")
+  return(df)
+}
+cor_nonlinear <- function(muX, muY, sX, sY, angle){
+  # muX and muY have no effect
+  sQ <- sqrt(cos(angle)**2 * (2*sX**4 + 4*sX**2*muX**2 +  sY**2) + sin(angle)**2 * sX**2 + 2 * cos(angle)*sin(angle)*(2*sX**2*muX))
+  sR <- sqrt(sin(angle)**2 * (2*sX**4 + 4*sX**2*muX**2 + sY**2) + cos(angle)**2 * sX**2 - 2 * cos(angle)*sin(angle)*(2*sX**2*muX))
+  cov <- sin(angle)*cos(angle) * (sX**2 - (2*sX**4 + 4*sX**2*muX**2 + sY**2)) +
+    (cos(angle)**2 - sin(angle)**2) * (2*sX**2*muX)
+  cor <- round(cov/(sQ*sR), 4)
+  return(cor)
+}
+
+n <- 500
+set.seed(18411)
+df <- gen_nonlinear(n=n, muX=muX, muY=muY, sX=sX, sY=sY, angle=0.37)
+# population correlation in this setting 
+rho <- cor_nonlinear(muX=muX, muY=muY, sX=sX, sY=# Generate data, nonlinear setting
+                       sY, angle=angle)
+plot(df, main=paste("Population correlation = ", round(rho, 3)))
+```
+
+#### 2.1.2 Exercise 2, question 2: Confidence Interval Coverage Study 
+In this exercise, we were requested to analyze the coverage of different confidence intervals for:
+- the PDF of ()
+
++-------------------+----------------+----------------+
+|setting/           |sample size     |sample size     |
+|sample size        |n = 42          |n = 90          |
++===================+================+================+
+|*Normal, Boot*     |coverage = 0.767|coverage = 0.786|
++-------------------+----------------+----------------+
+|*Normal, NPboot*   |coverage = 0.761|coverage = 0.777|
++-------------------+----------------+----------------+
+|*Outliers, Boot*   |coverage = 0.681|coverage = 0.617|
++-------------------+----------------+----------------+
+|*Outliers, Npboot* |coverage = 0.77 |coverage = 0.718|
++-------------------+----------------+----------------+
+|*Discrete, Boot*   |coverage = 0.769|coverage = 0.775|
++-------------------+----------------+----------------+
+|*Discrete, Npboot* |coverage = 0.763|coverage = 0.778|
++-------------------+----------------+----------------+
+|*Nonlinear, Boot*  |coverage = 0.538|coverage = 0.548|
++-------------------+----------------+----------------+
+|*Nonlinear, Npboot*|coverage = 0.694|coverage = 0.691|
++-------------------+----------------+----------------+
+
+
+
+### 2.2 Statistical Methods 
+### 2.3 Acquired skills 
+## Conclusion 
+
